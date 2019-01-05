@@ -1,0 +1,33 @@
+
+The purpose of this project was to apply Kernel K-means clustering techniques on 500 S&P companies stock prices. Both polynomial and RBF kernels were applied.
+
+The Kernel Trick
+Kernel functions enable to operate in a high-dimensional, implicit feature space without ever computing the coordinates of the data in that space, but rather by simply computing the inner products between the images of all pairs of data in the feature space. 
+K(x,y)= K(y,x)= 〖<X,Y>〗_H= 〖<F(x),F(y)>〗_H
+Polynomial Kernel
+For any constant c >0 and any integer a, the formula
+K (x,y)= 〖[c+ <x ,y>]〗^a
+Defines a positive definite kernel, which is given by a polynomial of degree a in the coordinates of the R^p vectors x, y.
+
+Exponential Kernel
+For any σ > 0 the formula
+K (x ,y)=exp⁡[    〖-||x-y||〗^2/σ^2 ]
+defines a positive definite kernel for all x, y in R^p.
+
+I will use two methods to evaluate the quality of clustering by Kernel K-means
+Calculation of Separability Indices
+In the vector space R^p considering any cluster  G_i={ y(1)…y(r)} of size r and with centroid  C_i, we compute the r distances as follows
+d_1=|| y(1)- C_(i ) ||,….,d_r=||y(r)- C_i ||
+We define R (G_i )  as 95% radius of  G_i meaning that 95% of these r distances are smaller than R (G_i ).
+For a given pair of disjoint clusters  G_i and  G_jwith centroids C_i and C_j, we can compute the R (G_i ) and R (G_j). The separability index between these two clusters is defined as 
+〖SEP〗_((i,j))=[R(G_i )+R(G_j )]/(|| C_i- C_j || )
+High separability of G_i and  G_j corresponds to values of 〖SEP〗_((i,j)) smaller than 1. The separability becomes poorer when 〖SEP〗_((i,j)) increases. Therefore, the separability indices are a means of checking the quality of clustering.
+
+Calculation of Thickness Boundary (THB)
+Let’s, denote 2 elements as G_i and  G_j as follows,
+G_i={ y(1)…y(r)}     and   G_j={ z(1)…z(t)}     
+For all m=1…r and all n=1…t, we compute the distances
+a(m,n)=||y(m)-y(n)||
+Then, we define A as the 1% quantile of the r * t distances a (m, n) and compute the ratio
+〖THB〗_((i,j))=  A/(|| C_i- C_j ||)
+The THB is generally less than 1. Large values of this ratio indicate better separability between G_i and  G_j
