@@ -1,0 +1,124 @@
+library(kernlab)
+library(clValid)
+library(scatterplot3d) 
+library(rgl)
+library(tibble)
+library(factoextra)
+library("dtwclust")
+library(xts)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(reshape)
+library(padr)
+library(zoo)
+library(imputeTS)
+library(mtsdi)
+library(TSclust)
+library(pamr)
+library(gdata)
+
+# Step1: Data for S and P 500 stock price were downloaded from Kaggle website. This dataset contain 123560 rows and 5 variables. 
+# The 5 variables are date, open, high, close, and volume.
+
+setwd("C:/Users/zhangy1/MSDS courses/Clustering and machine learning/S&P 500")
+pivoted <- read.csv("pivoted_2016.csv")
+qq <- pivoted[,-1]
+
+# convert date column into date format
+date <- ymd(qq$date) ### great!!!! converted to date
+
+#convert to time series, once coverted, your data will contain the date information, more powerful than regular matrix
+tsdata <-xts(qq[,-1],date)   # coredata in front, index in the back
+
+#interpolate
+interpo <- na.locf(tsdata)
+
+#normalizing data, scale will center by column
+new_norm <- scale(interpo)   #new_norm is the right dimension
+
+#convet to matrix and tranpose
+aa <-t(as.matrix(new_norm))
+
+
+####################
+#kernel-Kmeans
+#####################3
+# Examples using Polynomial degree =2
+poly2_G <- kernelMatrix(polydot(degree = 2),aa)
+set.seed(10)
+kkmeans_2016_poly2 <- kkmeans(poly2_G, centers = 11,nstart = 1000)
+
+#generate a list contains all the names of stocks in one cluster
+cc <- NULL
+for (k in 1:11){cc[[k]]<-rownames(aa)[which(kkmeans_2016_poly2@.Data == k)]}
+
+##########################
+# Separability indices
+##########################
+#subset of total kernel matrix to contain only one cluster
+gg <- NULL
+for (j in 1:11){gg[[j]] <- poly2_G[ cc[[j]],cc[[j]] ]}
+
+#retrieve the diagnol of kernel matrix from each cluster
+self_dot <- NULL
+for (j in 1:11){
+  self_dot[[j]] <- diag(gg[[j]])
+}
+# calculate center square
+center_square <-NULL
+for (i in 1:11){
+  center_square[i] <- mean(gg[[i]])
+}
+
+## calculate radius of each cluster  
+radius <-NULL
+dd <- NULL
+for (i in 1:11){
+  dd[[i]] <- sqrt( self_dot[[i]] + center_square[[i]] -2*apply(gg[[i]],1,mean) )
+  radius[i] <- quantile(dd[[i]],0.95) # even change to 0.9 ,0.8 does not change RBG 
+  }
+
+# distance between any two clusters or you can just use tempCi_Cj <- mean (poly2_G[ cc[[1]],cc[[1]] ])
+Ci_Cj <- matrix(,nrow = 11, ncol = 11)  # have to define the number of columns and rows for matrix
+for (i in 1:11) {
+  for (j in 1:11) {
+   Ci_Cj[i,j] <- sum (poly2_G[ cc[[i]],cc[[j]] ])/( length(cc[[i]])*length(cc[[j]]) )  ## this is just the mean 
+  }
+}
+
+#separation indices
+sep <- matrix(,nrow = 11, ncol = 11)
+for (i in 1:11) {
+  for (j in 1:11) {
+    sep[i,j] <- (radius[i]+radius[j])/sqrt(center_square[i]+center_square[j]-2*Ci_Cj[i,j])
+  }
+}
+
+sepInd <- upperTriangle(sep)
+hist(sepInd, xlab = "Speparation Indices",main = "Separation indices of Polynomial degree of 2",col = "blue")
+
+####################################################
+#Thickness Boundary
+####################################################
+#calculate the distance between any two points between 2 clusters in Hilbert space, 
+self_dot[[1]] 
+d2 <- list()
+d3 <- list()
+  for (n in 1:11) {
+    d2[[n]] <- list()
+    d3[[n]] <- list()
+    for (g in 1:11){
+      d2 [[n]] [[g]] <- sqrt(2*self_dot[[1]][1] - 2*apply(poly2_G[ cc[[n]],cc[[g]] ],1,mean))    ### list within a list
+      d3 [[n]] [[g]] <- quantile(d2 [[n]] [[g]],0.01)
+    }}
+ 
+THB <-matrix(,nrow = 11, ncol = 11)
+for (i in 1:11) {
+  for (j in 1:11) {
+    THB[i,j] <- (d3 [[i]] [[j]])/sqrt(center_square[i]+center_square[j]-2*Ci_Cj[i,j])
+  }
+}
+
+THBupper <- upperTriangle(THB)
+hist(THBupper, xlab = "Thickness of Boundary",main = "Thickness of Boundary Polynomial degree =2",col = "Red")
